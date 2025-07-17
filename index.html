@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Volume</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #282c34;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            overflow: hidden;
+            /* Pixelated rendering for sharper edges on scaled elements */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background-color: #3a404a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+            width: 95%;
+            max-width: 1400px;
+            box-sizing: border-box;
+            gap: 15px;
+        }
+
+        .game-area-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 700px;
+            border: 4px solid #4a4a4a;
+            overflow: hidden;
+            border-radius: 5px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+
+            /* --- Revised Background Styling for Hills and Ground --- */
+            /* Layer 1: Repeating Hills (topmost background-image for layering) */
+            background-image:
+                repeating-linear-gradient(
+                    -45deg,
+                    rgba(100, 180, 100, 0.3) 0px,
+                    rgba(100, 180, 100, 0.3) 10px,
+                    transparent 10px,
+                    transparent 20px
+                ),
+                repeating-linear-gradient(
+                    45deg,
+                    rgba(100, 180, 100, 0.3) 0px,
+                    rgba(100, 180, 100, 0.3) 10px,
+                    transparent 10px,
+                    transparent 20px
+                );
+            background-size: 80px 80px, 80px 80px; /* Size of the repeating pattern */
+            background-position: 0% calc(100% - 150px), 40px calc(100% - 150px); /* Position above ground, offset for staggered hills */
+            background-repeat: repeat-x; /* Repeat horizontally */
+
+            /* Layer 2: Ground Layer (below hills) */
+            background-image:
+                linear-gradient(to bottom, #a0d468 0%, #a0d468 90%, #8bc34a 90%, #8bc34a 100%);
+            background-size: 100% 100px; /* Ground height */
+            background-position: 0% 100%; /* Position at the bottom */
+            background-repeat: repeat-x;
+
+            /* Layer 3: Base Sky Color (bottommost layer) */
+            background-color: #70c5ce; /* Sky blue */
+
+            /* Ensure pixelation for gradients if they are scaled */
+            -webkit-font-smoothing: none;
+        }
+
+        /* --- PNG Bird Styling for <img> tag --- */
+        .bird {
+            position: absolute;
+            width: 50px; /* Original PNG width */
+            height: 36px; /* Original PNG height */
+            left: 50px;
+            top: 0; /* Will be controlled by birdY */
+            z-index: 10;
+            transition: transform 0.1s ease-out;
+            transform-origin: center;
+        }
+        /* --- End PNG Bird Styling --- */
+
+        /* --- Flappy Bird Style Pipes (CSS-drawn) --- */
+        .pipe {
+            position: absolute;
+            background-color: #7acc29; /* Main pipe body green */
+            border: 2px solid #336600; /* Darker green outline */
+            width: 60px; /* Standard Flappy Bird pipe width */
+            border-radius: 0px; /* Completely square pipes */
+            box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5); /* Pixel-like shadow */
+            box-sizing: border-box; /* Include padding/border in width/height */
+        }
+
+        /* Pipe caps using pseudo-elements */
+        .pipe::before {
+            content: '';
+            position: absolute;
+            background-color: #558800; /* Darker green for the cap */
+            border: 2px solid #336600; /* Same outline as pipe */
+            width: 70px; /* Wider than pipe for the cap effect */
+            height: 15px; /* Height of the cap */
+            left: -5px; /* Position to be wider than the pipe */
+            box-sizing: border-box;
+            z-index: 1; /* Ensure caps are on top of the pipe body */
+            box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3); /* Small shadow for cap */
+        }
+
+        .pipe.top::before { /* Top pipe's cap (at its bottom, facing the gap) */
+            bottom: -15px; /* Position at the bottom of the top pipe */
+            border-top: none; /* No top border for the cap */
+        }
+
+        .pipe.bottom::before { /* Bottom pipe's cap (at its top, facing the gap) */
+            top: -15px; /* Position at the top of the bottom pipe */
+            border-bottom: none; /* No bottom border for the cap */
+        }
+        /* --- End Flappy Bird Style Pipes --- */
+
+
+        .score-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 0px #000;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .volume-bar-container {
+            width: 100%;
+            height: 40px;
+            background-color: #555;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #777;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .volume-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e91e63, #ff9800);
+            border-radius: 8px;
+            transition: width 0.1s ease-out;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .volume-label {
+            position: relative;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 0px #000;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-label svg {
+            width: 28px;
+            height: 28px;
+            fill: #fff;
+        }
+
+        .restart-button {
+            padding: 12px 25px;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(145deg, #61dafb, #2196f3);
+            border: 2px solid #0056b3;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5);
+            transition: all 0.1s ease-out;
+            margin-top: 15px;
+        }
+
+        .restart-button:hover {
+            background: linear-gradient(145deg, #2196f3, #61dafb);
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.6);
+        }
+
+        .restart-button:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(0px);
+        }
+
+        .game-over-overlay h2 {
+            color: #ff5252;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 0px #000;
+            letter-spacing: 2px;
+        }
+
+        .game-over-overlay p {
+            font-size: 1.5em;
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #app {
+                padding: 15px;
+                gap: 10px;
+                border-radius: 5px;
+            }
+            .game-container {
+                height: 500px;
+                border-radius: 3px;
+            }
+            .score-display {
+                font-size: 1.5em;
+                text-shadow: 1px 1px 0px #000;
+            }
+            .volume-bar-container {
+                height: 35px;
+                border-radius: 5px;
+            }
+            .volume-bar-fill {
+                border-radius: 5px;
+            }
+            .volume-label {
+                font-size: 1em;
+                gap: 5px;
+                text-shadow: 1px 1px 0px #000;
+            }
+            .volume-label svg {
+                width: 24px;
+                height: 24px;
+            }
+            .restart-button {
+                font-size: 1.1em;
+                padding: 10px 20px;
+                border-radius: 4px;
+            }
+            .game-over-overlay h2 {
+                font-size: 2.5em;
+                text-shadow: 2px 2px 0px #000;
+            }
+            .game-over-overlay p {
+                font-size: 1.2em;
+                text-shadow: 1px 1px 0px #000;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="volume-bar-container">
+            <div class="volume-bar-fill" :style="{ width: volumeBarWidth }"></div>
+            <span class="volume-label">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+                {{ volume }} / {{ maxVolume }}
+            </span>
+        </div>
+
+        <div class="game-area-wrapper">
+            <div class="score-display">Pipes Cleared: {{ score }}</div>
+            <div class="game-container" ref="gameContainer">
+                <img class="bird" :style="{ top: birdY + 'px', transform: 'rotate(' + birdRotation + 'deg)' }" src="https://raw.githubusercontent.com/Jayward225/FloppyBird/main/Pixelated%20Bird%20Character.png" alt="Flappy Bird Character">
+                <template v-for="(pipe, index) in pipes" :key="index">
+                    <div class="pipe top" :style="{ left: pipe.x + 'px', height: pipe.y + 'px' }"></div>
+                    <div class="pipe bottom" :style="{ left: pipe.x + 'px', top: (pipe.y + pipe.gap) + 'px', height: (gameHeight - pipe.y - pipe.gap) + 'px' }"></div>
+                </template>
+
+                <div class="game-over-overlay" v-if="gameOver">
+                    <h2>Game Over!</h2>
+                    <p>You cleared {{ score }} pipes.</p>
+                    <p>Your final "volume" is: {{ volume }}</p>
+                    <button class="restart-button" @click="restartGame">Restart Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted, computed, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // Game dimensions
+                const gameWidth = ref(0); // Will be set dynamically based on container width
+                const gameHeight = 700; // Much taller game area
+
+                // Bird properties
+                const birdX = ref(50);
+                const birdY = ref(gameHeight / 2 - 15); // Center vertically initially
+                const birdVelocity = ref(0);
+                const birdRotation = ref(0); // New: Bird rotation in degrees
+                const gravity = 0.5;
+                const jumpStrength = -8;
+
+                // PNG Bird dimensions (original pixel dimensions)
+                const pngBirdWidth = 50;
+                const pngBirdHeight = 36;
+
+                // Pipe properties
+                const pipes = ref([]);
+                const pipeWidth = 60; /* Standard Flappy Bird pipe width */
+                const pipeGap = 180; /* Increased gap for easier play */
+                const pipeSpeed = 2.5; /* Decreased speed */
+                const pipeInterval = 1800;
+
+                // Game state
+                const gameStarted = ref(false);
+                const gameOver = ref(false);
+                const score = ref(0);
+                const volume = ref(0); // This is our "volume" level
+                const maxVolume = ref(50); // Maximum "volume" for the bar
+
+                let gameLoopId = null;
+                let pipeGenerationIntervalId = null;
+                const gameContainer = ref(null);
+
+                // Computed property for volume bar width (for horizontal bar)
+                const volumeBarWidth = computed(() => {
+                    return `${(volume.value / maxVolume.value) * 100}%`;
+                });
+
+                // Function to update gameWidth based on container size
+                const updateGameWidth = () => {
+                    if (gameContainer.value) {
+                        gameWidth.value = gameContainer.value.clientWidth;
+                    }
+                };
+
+                // --- Game Logic Functions ---
+
+                // Starts the game
+                const startGame = () => {
+                    gameStarted.value = true;
+                    gameOver.value = false;
+                    score.value = 0;
+                    volume.value = 0;
+                    birdY.value = gameHeight / 2 - (pngBirdHeight / 2);
+                    birdVelocity.value = 0;
+                    birdRotation.value = 0;
+                    pipes.value = [];
+                    generateInitialPipes();
+                    gameLoopId = requestAnimationFrame(gameLoop);
+                    pipeGenerationIntervalId = setInterval(generatePipe, pipeInterval);
+                };
+
+                // Restarts the game after game over
+                const restartGame = () => {
+                    startGame();
+                };
+
+                // Main game loop
+                const gameLoop = () => {
+                    if (!gameStarted.value || gameOver.value) {
+                        cancelAnimationFrame(gameLoopId);
+                        clearInterval(pipeGenerationIntervalId);
+                        return;
+                    }
+
+                    // Update bird position
+                    birdVelocity.value += gravity;
+                    birdY.value += birdVelocity.value;
+
+                    // Update bird rotation based on velocity
+                    birdRotation.value = Math.min(45, Math.max(-20, birdVelocity.value * 3));
+
+
+                    // Keep bird within vertical bounds (and trigger game over if hits ground/ceiling)
+                    if (birdY.value < 0 || birdY.value + pngBirdHeight > gameHeight) {
+                        endGame();
+                        return;
+                    }
+
+                    // Move and manage pipes
+                    pipes.value.forEach(pipe => {
+                        pipe.x -= pipeSpeed;
+
+                        // Check if bird passed pipe
+                        // The bird's left edge must be past the pipe's right edge to count as cleared.
+                        // And ensure it's only counted once per pipe.
+                        if (!pipe.passed && birdX.value > (pipe.x + pipeWidth)) {
+                            pipe.passed = true;
+                            score.value++;
+                            if (volume.value < maxVolume.value) {
+                                volume.value++;
+                            }
+                        }
+                    });
+
+                    // Remove off-screen pipes
+                    pipes.value = pipes.value.filter(pipe => pipe.x + pipeWidth > 0);
+
+                    // Check for collisions
+                    checkCollisions();
+
+                    gameLoopId = requestAnimationFrame(gameLoop);
+                };
+
+                // Generates a new pipe pair
+                const generatePipe = () => {
+                    const minTopPipeHeight = 50;
+                    const maxTopPipeHeight = gameHeight - pipeGap - 50;
+                    const topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minTopPipeHeight + 1)) + minTopPipeHeight;
+
+                    pipes.value.push({
+                        x: gameWidth.value,
+                        y: topPipeHeight,
+                        gap: pipeGap,
+                        passed: false
+                    });
+                };
+
+                // Generates initial pipes for a smoother start
+                const generateInitialPipes = () => {
+                    generatePipe();
+                    setTimeout(generatePipe, pipeInterval / 2);
+                };
+
+                // Checks for collisions between bird and pipes
+                const checkCollisions = () => {
+                    const birdRect = {
+                        left: birdX.value,
+                        right: birdX.value + pngBirdWidth,
+                        top: birdY.value,
+                        bottom: birdY.value + pngBirdHeight
+                    };
+
+                    for (const pipe of pipes.value) {
+                        const pipeTopRect = {
+                            left: pipe.x,
+                            right: pipe.x + pipeWidth,
+                            top: 0,
+                            bottom: pipe.y
+                        };
+
+                        const pipeBottomRect = {
+                            left: pipe.x,
+                            right: pipe.x + pipeWidth,
+                            top: pipe.y + pipe.gap,
+                            bottom: gameHeight
+                        };
+
+                        // Check collision with top pipe
+                        if (
+                            birdRect.left < pipeTopRect.right &&
+                            birdRect.right > pipeTopRect.left &&
+                            birdRect.top < pipeTopRect.bottom &&
+                            birdRect.bottom > pipeTopRect.top
+                        ) {
+                            endGame();
+                            return;
+                        }
+
+                        // Check collision with bottom pipe
+                        if (
+                            birdRect.left < pipeBottomRect.right &&
+                            birdRect.right > pipeBottomRect.left &&
+                            birdRect.top < pipeBottomRect.bottom &&
+                            birdRect.bottom > pipeBottomRect.top
+                        ) {
+                            endGame();
+                            return;
+                        }
+                    }
+                };
+
+                // Ends the game
+                const endGame = () => {
+                    gameOver.value = true;
+                    gameStarted.value = false;
+                    cancelAnimationFrame(gameLoopId);
+                    clearInterval(pipeGenerationIntervalId);
+                };
+
+                // Makes the bird jump
+                const birdJump = () => {
+                    if (gameStarted.value && !gameOver.value) {
+                        birdVelocity.value = jumpStrength;
+                    }
+                };
+
+                // --- Event Listeners ---
+
+                // Handle spacebar press
+                const handleKeyDown = (event) => {
+                    if (event.code === 'Space') {
+                        event.preventDefault();
+                        if (!gameStarted.value && !gameOver.value) {
+                            startGame();
+                        } else {
+                            birdJump();
+                        }
+                    }
+                };
+
+                // Handle click on game container
+                const handleClick = () => {
+                    if (!gameStarted.value && !gameOver.value) {
+                        startGame();
+                    } else {
+                        birdJump();
+                    }
+                };
+
+                // --- Lifecycle Hooks ---
+
+                onMounted(() => {
+                    nextTick(() => {
+                        updateGameWidth();
+                    });
+
+                    window.addEventListener('keydown', handleKeyDown);
+                    if (gameContainer.value) {
+                        gameContainer.value.addEventListener('click', handleClick);
+                    }
+                    window.addEventListener('resize', updateGameWidth);
+                });
+
+                onUnmounted(() => {
+                    window.removeEventListener('keydown', handleKeyDown);
+                    if (gameContainer.value) {
+                        gameContainer.value.removeEventListener('click', handleClick);
+                    }
+                    window.removeEventListener('resize', updateGameWidth);
+                    cancelAnimationFrame(gameLoopId);
+                    clearInterval(pipeGenerationIntervalId);
+                });
+
+                return {
+                    birdY,
+                    birdX,
+                    birdRotation,
+                    pipes,
+                    score,
+                    volume,
+                    maxVolume,
+                    volumeBarWidth,
+                    gameStarted,
+                    gameOver,
+                    startGame,
+                    restartGame,
+                    gameHeight,
+                    gameContainer
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
