@@ -10,13 +10,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: 100vh; /* Ensure body takes full viewport height */
             margin: 0;
             background-color: #282c34;
             font-family: 'Inter', sans-serif;
             color: #fff;
             overflow: hidden;
-            /* Pixelated rendering for sharper edges on scaled elements */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: -webkit-optimize-contrast;
@@ -26,7 +25,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: flex-start; /* Align content to top */
             background-color: #3a404a;
             border-radius: 8px;
             padding: 20px;
@@ -35,6 +34,8 @@
             max-width: 1400px;
             box-sizing: border-box;
             gap: 15px;
+            min-height: calc(100vh - 40px); /* Adjust app height to fit viewport, accounting for body padding/margin if any */
+            max-height: calc(100vh - 40px);
         }
 
         .game-area-wrapper {
@@ -43,59 +44,38 @@
             align-items: center;
             gap: 10px;
             width: 100%;
+            flex-grow: 1; /* Allow game area to take up available vertical space */
+            /* Removed min-height: 0; as it was causing issues with flex-grow */
         }
 
         .game-container {
             position: relative;
             width: 100%;
-            height: 700px;
+            height: 100%; /* Take full height of its parent (game-area-wrapper) */
+            flex-grow: 1; /* Added: Allow game-container to grow within game-area-wrapper */
+            min-height: 300px; /* Fallback min-height for visibility */
+            max-height: calc(100% - 120px); /* Adjusted max-height to account for stats/volume bar (approx) */
             border: 4px solid #4a4a4a;
             overflow: hidden;
             border-radius: 5px;
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
 
-            /* --- Revised Background Styling for Hills and Ground --- */
-            /* Layer 1: Repeating Hills (topmost background-image for layering) */
-            background-image:
-                repeating-linear-gradient(
-                    -45deg,
-                    rgba(100, 180, 100, 0.3) 0px,
-                    rgba(100, 180, 100, 0.3) 10px,
-                    transparent 10px,
-                    transparent 20px
-                ),
-                repeating-linear-gradient(
-                    45deg,
-                    rgba(100, 180, 100, 0.3) 0px,
-                    rgba(100, 180, 100, 0.3) 10px,
-                    transparent 10px,
-                    transparent 20px
-                );
-            background-size: 80px 80px, 80px 80px; /* Size of the repeating pattern */
-            background-position: 0% calc(100% - 150px), 40px calc(100% - 150px); /* Position above ground, offset for staggered hills */
-            background-repeat: repeat-x; /* Repeat horizontally */
+            /* --- Simplified Background Styling: Sky and Ground --- */
+            background-color: #70c5ce; /* Sky blue base */
+            background-image: linear-gradient(to bottom, transparent calc(100% - 100px), #a0d468 calc(100% - 100px), #a0d468 90%, #8bc34a 90%);
+            background-size: 100% 100%; /* Cover entire container */
+            background-repeat: no-repeat; /* No repeat for this main gradient */
 
-            /* Layer 2: Ground Layer (below hills) */
-            background-image:
-                linear-gradient(to bottom, #a0d468 0%, #a0d468 90%, #8bc34a 90%, #8bc34a 100%);
-            background-size: 100% 100px; /* Ground height */
-            background-position: 0% 100%; /* Position at the bottom */
-            background-repeat: repeat-x;
-
-            /* Layer 3: Base Sky Color (bottommost layer) */
-            background-color: #70c5ce; /* Sky blue */
-
-            /* Ensure pixelation for gradients if they are scaled */
             -webkit-font-smoothing: none;
         }
 
         /* --- PNG Bird Styling for <img> tag --- */
         .bird {
             position: absolute;
-            width: 50px; /* Original PNG width */
-            height: 36px; /* Original PNG height */
+            width: 50px;
+            height: 36px;
             left: 50px;
-            top: 0; /* Will be controlled by birdY */
+            top: 0;
             z-index: 10;
             transition: transform 0.1s ease-out;
             transform-origin: center;
@@ -105,41 +85,40 @@
         /* --- Flappy Bird Style Pipes (CSS-drawn) --- */
         .pipe {
             position: absolute;
-            background-color: #7acc29; /* Main pipe body green */
-            border: 2px solid #336600; /* Darker green outline */
-            width: 60px; /* Standard Flappy Bird pipe width */
-            border-radius: 0px; /* Completely square pipes */
-            box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5); /* Pixel-like shadow */
-            box-sizing: border-box; /* Include padding/border in width/height */
+            background-color: #7acc29;
+            border: 2px solid #336600;
+            width: 60px;
+            border-radius: 0px;
+            box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
         }
 
-        /* Pipe caps using pseudo-elements */
         .pipe::before {
             content: '';
             position: absolute;
-            background-color: #558800; /* Darker green for the cap */
-            border: 2px solid #336600; /* Same outline as pipe */
-            width: 70px; /* Wider than pipe for the cap effect */
-            height: 15px; /* Height of the cap */
-            left: -5px; /* Position to be wider than the pipe */
+            background-color: #558800;
+            border: 2px solid #336600;
+            width: 70px;
+            height: 15px;
+            left: -5px;
             box-sizing: border-box;
-            z-index: 1; /* Ensure caps are on top of the pipe body */
-            box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3); /* Small shadow for cap */
+            z-index: 1;
+            box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
         }
 
-        .pipe.top::before { /* Top pipe's cap (at its bottom, facing the gap) */
-            bottom: -15px; /* Position at the bottom of the top pipe */
-            border-top: none; /* No top border for the cap */
+        .pipe.top::before {
+            bottom: -15px;
+            border-top: none;
         }
 
-        .pipe.bottom::before { /* Bottom pipe's cap (at its top, facing the gap) */
-            top: -15px; /* Position at the top of the bottom pipe */
-            border-bottom: none; /* No bottom border for the cap */
+        .pipe.bottom::before {
+            top: -15px;
+            border-bottom: none;
         }
         /* --- End Flappy Bird Style Pipes --- */
 
 
-        .score-display {
+        .score-display, .lives-display {
             font-size: 2em;
             font-weight: bold;
             color: #fff;
@@ -147,6 +126,20 @@
             margin-bottom: 10px;
             letter-spacing: 1px;
         }
+
+        .lives-display {
+            color: #ff5252;
+            margin-left: 20px;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
 
         .volume-bar-container {
             width: 100%;
@@ -249,18 +242,36 @@
             text-shadow: 1px 1px 0px #000;
         }
 
+        .game-over-overlay .final-volume {
+            font-size: 2em;
+            color: #ffeb3b;
+            margin-top: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .no-more-lives-message {
+            font-size: 1.5em;
+            color: #ff5252;
+            margin-top: 15px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+
         /* Responsive adjustments */
         @media (max-width: 768px) {
             #app {
                 padding: 15px;
                 gap: 10px;
                 border-radius: 5px;
+                min-height: calc(100vh - 30px);
+                max-height: calc(100vh - 30px);
             }
             .game-container {
-                height: 500px;
+                min-height: 200px;
+                max-height: 500px;
                 border-radius: 3px;
             }
-            .score-display {
+            .score-display, .lives-display {
                 font-size: 1.5em;
                 text-shadow: 1px 1px 0px #000;
             }
@@ -309,7 +320,10 @@
         </div>
 
         <div class="game-area-wrapper">
-            <div class="score-display">Pipes Cleared: {{ score }}</div>
+            <div class="stats-container">
+                <div class="score-display">Pipes Cleared: {{ score }}</div>
+                <div class="lives-display">Lives: {{ lives }}</div>
+            </div>
             <div class="game-container" ref="gameContainer">
                 <img class="bird" :style="{ top: birdY + 'px', transform: 'rotate(' + birdRotation + 'deg)' }" src="https://raw.githubusercontent.com/Jayward225/FloppyBird/main/Pixelated%20Bird%20Character.png" alt="Flappy Bird Character">
                 <template v-for="(pipe, index) in pipes" :key="index">
@@ -320,8 +334,9 @@
                 <div class="game-over-overlay" v-if="gameOver">
                     <h2>Game Over!</h2>
                     <p>You cleared {{ score }} pipes.</p>
-                    <p>Your final "volume" is: {{ volume }}</p>
-                    <button class="restart-button" @click="restartGame">Restart Game</button>
+                    <p class="final-volume">Final "Volume": {{ volume }}</p>
+                    <button class="restart-button" v-if="lives > 0" @click="restartGame">Continue ({{ lives }} lives left)</button>
+                    <p class="no-more-lives-message" v-else>No more lives! Game Over.</p>
                 </div>
             </div>
         </div>
@@ -334,13 +349,13 @@
             setup() {
                 // Game dimensions
                 const gameWidth = ref(0); // Will be set dynamically based on container width
-                const gameHeight = 700; // Much taller game area
+                const gameHeight = ref(0); // Now dynamic
 
                 // Bird properties
                 const birdX = ref(50);
-                const birdY = ref(gameHeight / 2 - 15); // Center vertically initially
+                const birdY = ref(0); // Will be set dynamically based on gameHeight
                 const birdVelocity = ref(0);
-                const birdRotation = ref(0); // New: Bird rotation in degrees
+                const birdRotation = ref(0);
                 const gravity = 0.5;
                 const jumpStrength = -8;
 
@@ -350,17 +365,18 @@
 
                 // Pipe properties
                 const pipes = ref([]);
-                const pipeWidth = 60; /* Standard Flappy Bird pipe width */
-                const pipeGap = 180; /* Increased gap for easier play */
-                const pipeSpeed = 2.5; /* Decreased speed */
-                const pipeInterval = 1800;
+                const pipeWidth = 60;
+                const pipeGap = 180;
+                const pipeSpeed = 5;
+                const pipeInterval = 2500;
 
                 // Game state
                 const gameStarted = ref(false);
                 const gameOver = ref(false);
                 const score = ref(0);
-                const volume = ref(0); // This is our "volume" level
-                const maxVolume = ref(50); // Maximum "volume" for the bar
+                const volume = ref(0);
+                const maxVolume = ref(50);
+                const lives = ref(3);
 
                 let gameLoopId = null;
                 let pipeGenerationIntervalId = null;
@@ -371,22 +387,63 @@
                     return `${(volume.value / maxVolume.value) * 100}%`;
                 });
 
-                // Function to update gameWidth based on container size
-                const updateGameWidth = () => {
+                // Function to update gameWidth and gameHeight based on container size
+                const updateGameDimensions = () => {
                     if (gameContainer.value) {
                         gameWidth.value = gameContainer.value.clientWidth;
+                        // Calculate gameHeight based on available space, subtracting fixed heights of other elements
+                        const appElement = document.getElementById('app');
+                        const volumeBarHeight = document.querySelector('.volume-bar-container')?.offsetHeight || 0;
+                        const statsContainerHeight = document.querySelector('.stats-container')?.offsetHeight || 0;
+                        const appPadding = 40; // 20px top + 20px bottom padding on #app
+                        const appGap = 15; // Gap between elements in #app
+
+                        // Total vertical space taken by elements other than game-container
+                        const occupiedHeight = volumeBarHeight + statsContainerHeight + appPadding + (2 * appGap);
+
+                        // Remaining height for game-container
+                        gameHeight.value = Math.max(300, window.innerHeight - occupiedHeight); // Ensure min-height
+                        gameHeight.value = Math.min(gameHeight.value, 700); // Max height limit
+
+
+                        // Recalculate bird's initial Y position if gameHeight changes
+                        if (!gameStarted.value && !gameOver.value) {
+                            birdY.value = gameHeight.value / 2 - (pngBirdHeight / 2);
+                        }
+                    }
+                };
+
+                // --- Event Handlers (defined within setup and returned) ---
+                const handleKeyDown = (event) => {
+                    if (event.code === 'Space') {
+                        event.preventDefault();
+                        if (!gameStarted.value && !gameOver.value) {
+                            startGame();
+                        } else {
+                            birdJump();
+                        }
+                    }
+                };
+
+                const handleClick = () => {
+                    if (!gameStarted.value && !gameOver.value) {
+                        startGame();
+                    } else {
+                        birdJump();
                     }
                 };
 
                 // --- Game Logic Functions ---
 
-                // Starts the game
                 const startGame = () => {
                     gameStarted.value = true;
                     gameOver.value = false;
-                    score.value = 0;
-                    volume.value = 0;
-                    birdY.value = gameHeight / 2 - (pngBirdHeight / 2);
+                    if (lives.value === 0) {
+                        lives.value = 3;
+                        score.value = 0;
+                        volume.value = 0;
+                    }
+                    birdY.value = gameHeight.value / 2 - (pngBirdHeight / 2);
                     birdVelocity.value = 0;
                     birdRotation.value = 0;
                     pipes.value = [];
@@ -395,12 +452,19 @@
                     pipeGenerationIntervalId = setInterval(generatePipe, pipeInterval);
                 };
 
-                // Restarts the game after game over
+                const loseLife = () => {
+                    lives.value--;
+                    if (lives.value <= 0) {
+                        endGame(true);
+                    } else {
+                        endGame(false);
+                    }
+                };
+
                 const restartGame = () => {
                     startGame();
                 };
 
-                // Main game loop
                 const gameLoop = () => {
                     if (!gameStarted.value || gameOver.value) {
                         cancelAnimationFrame(gameLoopId);
@@ -408,27 +472,19 @@
                         return;
                     }
 
-                    // Update bird position
                     birdVelocity.value += gravity;
                     birdY.value += birdVelocity.value;
 
-                    // Update bird rotation based on velocity
                     birdRotation.value = Math.min(45, Math.max(-20, birdVelocity.value * 3));
 
-
-                    // Keep bird within vertical bounds (and trigger game over if hits ground/ceiling)
-                    if (birdY.value < 0 || birdY.value + pngBirdHeight > gameHeight) {
-                        endGame();
+                    if (birdY.value < 0 || birdY.value + pngBirdHeight > gameHeight.value) {
+                        loseLife();
                         return;
                     }
 
-                    // Move and manage pipes
                     pipes.value.forEach(pipe => {
                         pipe.x -= pipeSpeed;
 
-                        // Check if bird passed pipe
-                        // The bird's left edge must be past the pipe's right edge to count as cleared.
-                        // And ensure it's only counted once per pipe.
                         if (!pipe.passed && birdX.value > (pipe.x + pipeWidth)) {
                             pipe.passed = true;
                             score.value++;
@@ -438,19 +494,16 @@
                         }
                     });
 
-                    // Remove off-screen pipes
                     pipes.value = pipes.value.filter(pipe => pipe.x + pipeWidth > 0);
 
-                    // Check for collisions
                     checkCollisions();
 
                     gameLoopId = requestAnimationFrame(gameLoop);
                 };
 
-                // Generates a new pipe pair
                 const generatePipe = () => {
                     const minTopPipeHeight = 50;
-                    const maxTopPipeHeight = gameHeight - pipeGap - 50;
+                    const maxTopPipeHeight = gameHeight.value - pipeGap - 50;
                     const topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minTopPipeHeight + 1)) + minTopPipeHeight;
 
                     pipes.value.push({
@@ -461,13 +514,11 @@
                     });
                 };
 
-                // Generates initial pipes for a smoother start
                 const generateInitialPipes = () => {
                     generatePipe();
                     setTimeout(generatePipe, pipeInterval / 2);
                 };
 
-                // Checks for collisions between bird and pipes
                 const checkCollisions = () => {
                     const birdRect = {
                         left: birdX.value,
@@ -488,83 +539,59 @@
                             left: pipe.x,
                             right: pipe.x + pipeWidth,
                             top: pipe.y + pipe.gap,
-                            bottom: gameHeight
+                            bottom: gameHeight.value
                         };
 
-                        // Check collision with top pipe
                         if (
                             birdRect.left < pipeTopRect.right &&
                             birdRect.right > pipeTopRect.left &&
                             birdRect.top < pipeTopRect.bottom &&
                             birdRect.bottom > pipeTopRect.top
                         ) {
-                            endGame();
+                            loseLife();
                             return;
                         }
 
-                        // Check collision with bottom pipe
                         if (
                             birdRect.left < pipeBottomRect.right &&
                             birdRect.right > pipeBottomRect.left &&
                             birdRect.top < pipeBottomRect.bottom &&
                             birdRect.bottom > pipeBottomRect.top
                         ) {
-                            endGame();
+                            loseLife();
                             return;
                         }
                     }
                 };
 
-                // Ends the game
-                const endGame = () => {
+                const endGame = (isFinalGameOver) => {
                     gameOver.value = true;
                     gameStarted.value = false;
                     cancelAnimationFrame(gameLoopId);
                     clearInterval(pipeGenerationIntervalId);
+                    if (isFinalGameOver) {
+                        lives.value = 0;
+                    }
                 };
 
-                // Makes the bird jump
                 const birdJump = () => {
                     if (gameStarted.value && !gameOver.value) {
                         birdVelocity.value = jumpStrength;
                     }
                 };
 
-                // --- Event Listeners ---
-
-                // Handle spacebar press
-                const handleKeyDown = (event) => {
-                    if (event.code === 'Space') {
-                        event.preventDefault();
-                        if (!gameStarted.value && !gameOver.value) {
-                            startGame();
-                        } else {
-                            birdJump();
-                        }
-                    }
-                };
-
-                // Handle click on game container
-                const handleClick = () => {
-                    if (!gameStarted.value && !gameOver.value) {
-                        startGame();
-                    } else {
-                        birdJump();
-                    }
-                };
-
                 // --- Lifecycle Hooks ---
-
                 onMounted(() => {
+                    // Update dimensions initially and on resize
                     nextTick(() => {
-                        updateGameWidth();
+                        updateGameDimensions();
                     });
 
                     window.addEventListener('keydown', handleKeyDown);
                     if (gameContainer.value) {
                         gameContainer.value.addEventListener('click', handleClick);
                     }
-                    window.addEventListener('resize', updateGameWidth);
+                    window.addEventListener('resize', updateGameDimensions);
                 });
 
                 onUnmounted(() => {
@@ -572,7 +599,7 @@
                     if (gameContainer.value) {
                         gameContainer.value.removeEventListener('click', handleClick);
                     }
-                    window.removeEventListener('resize', updateGameWidth);
+                    window.removeEventListener('resize', updateGameDimensions);
                     cancelAnimationFrame(gameLoopId);
                     clearInterval(pipeGenerationIntervalId);
                 });
@@ -591,7 +618,8 @@
                     startGame,
                     restartGame,
                     gameHeight,
-                    gameContainer
+                    gameContainer,
+                    lives
                 };
             }
         }).mount('#app');
