@@ -10,7 +10,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Ensure body takes full viewport height */
+            height: 100vh; /* Ensure body takes full viewport height */
             margin: 0;
             background-color: #282c34;
             font-family: 'Inter', sans-serif;
@@ -34,8 +34,7 @@
             max-width: 1400px;
             box-sizing: border-box;
             gap: 15px;
-            min-height: calc(100vh - 40px); /* Adjust app height to fit viewport, accounting for body padding/margin if any */
-            max-height: calc(100vh - 40px);
+            height: 100vh; /* Make app take full viewport height */
         }
 
         .game-area-wrapper {
@@ -45,16 +44,15 @@
             gap: 10px;
             width: 100%;
             flex-grow: 1; /* Allow game area to take up available vertical space */
-            /* Removed min-height: 0; as it was causing issues with flex-grow */
+            height: 0; /* Important for flex-grow to work correctly */
         }
 
         .game-container {
             position: relative;
             width: 100%;
             height: 100%; /* Take full height of its parent (game-area-wrapper) */
-            flex-grow: 1; /* Added: Allow game-container to grow within game-area-wrapper */
             min-height: 300px; /* Fallback min-height for visibility */
-            max-height: calc(100% - 120px); /* Adjusted max-height to account for stats/volume bar (approx) */
+            max-height: 700px; /* Still maintain a max height for very large screens */
             border: 4px solid #4a4a4a;
             overflow: hidden;
             border-radius: 5px;
@@ -119,7 +117,7 @@
 
 
         .score-display, .lives-display {
-            font-size: 2em;
+            font-size: 1.2em; /* Decreased font size */
             font-weight: bold;
             color: #fff;
             text-shadow: 2px 2px 0px #000;
@@ -235,12 +233,13 @@
             letter-spacing: 2px;
         }
 
-        .game-over-overlay p {
+        /* Removed: You cleared x pipes. */
+        /* .game-over-overlay p {
             font-size: 1.5em;
             color: #f0f0f0;
             margin-bottom: 20px;
             text-shadow: 1px 1px 0px #000;
-        }
+        } */
 
         .game-over-overlay .final-volume {
             font-size: 2em;
@@ -263,16 +262,15 @@
                 padding: 15px;
                 gap: 10px;
                 border-radius: 5px;
-                min-height: calc(100vh - 30px);
-                max-height: calc(100vh - 30px);
+                height: 100vh; /* Ensure full height on mobile */
             }
             .game-container {
                 min-height: 200px;
-                max-height: 500px;
+                max-height: unset; /* Remove max-height to allow it to grow more */
                 border-radius: 3px;
             }
             .score-display, .lives-display {
-                font-size: 1.5em;
+                font-size: 1em; /* Further decreased for mobile */
                 text-shadow: 1px 1px 0px #000;
             }
             .volume-bar-container {
@@ -283,27 +281,24 @@
                 border-radius: 5px;
             }
             .volume-label {
-                font-size: 1em;
-                gap: 5px;
+                font-size: 0.9em;
+                gap: 4px;
                 text-shadow: 1px 1px 0px #000;
             }
             .volume-label svg {
-                width: 24px;
-                height: 24px;
+                width: 20px;
+                height: 20px;
             }
             .restart-button {
                 font-size: 1.1em;
                 padding: 10px 20px;
                 border-radius: 4px;
             }
-            .game-over-overlay h2 {
-                font-size: 2.5em;
-                text-shadow: 2px 2px 0px #000;
-            }
-            .game-over-overlay p {
+            /* Removed: You cleared x pipes. */
+            /* .game-over-overlay p {
                 font-size: 1.2em;
                 text-shadow: 1px 1px 0px #000;
-            }
+            } */
         }
     </style>
 </head>
@@ -333,8 +328,7 @@
 
                 <div class="game-over-overlay" v-if="gameOver">
                     <h2>Game Over!</h2>
-                    <p>You cleared {{ score }} pipes.</p>
-                    <p class="final-volume">Final "Volume": {{ volume }}</p>
+                    <p class="final-volume">Volume: {{ volume }}</p>
                     <button class="restart-button" v-if="lives > 0" @click="restartGame">Continue ({{ lives }} lives left)</button>
                     <p class="no-more-lives-message" v-else>No more lives! Game Over.</p>
                 </div>
@@ -391,20 +385,7 @@
                 const updateGameDimensions = () => {
                     if (gameContainer.value) {
                         gameWidth.value = gameContainer.value.clientWidth;
-                        // Calculate gameHeight based on available space, subtracting fixed heights of other elements
-                        const appElement = document.getElementById('app');
-                        const volumeBarHeight = document.querySelector('.volume-bar-container')?.offsetHeight || 0;
-                        const statsContainerHeight = document.querySelector('.stats-container')?.offsetHeight || 0;
-                        const appPadding = 40; // 20px top + 20px bottom padding on #app
-                        const appGap = 15; // Gap between elements in #app
-
-                        // Total vertical space taken by elements other than game-container
-                        const occupiedHeight = volumeBarHeight + statsContainerHeight + appPadding + (2 * appGap);
-
-                        // Remaining height for game-container
-                        gameHeight.value = Math.max(300, window.innerHeight - occupiedHeight); // Ensure min-height
-                        gameHeight.value = Math.min(gameHeight.value, 700); // Max height limit
-
+                        gameHeight.value = gameContainer.value.clientHeight; // Read actual clientHeight
 
                         // Recalculate bird's initial Y position if gameHeight changes
                         if (!gameStarted.value && !gameOver.value) {
@@ -413,7 +394,7 @@
                     }
                 };
 
-                // --- Event Handlers (defined within setup and returned) ---
+                // --- Event Handlers ---
                 const handleKeyDown = (event) => {
                     if (event.code === 'Space') {
                         event.preventDefault();
@@ -582,7 +563,20 @@
 
                 // --- Lifecycle Hooks ---
                 onMounted(() => {
-                    // Update dimensions initially and on resize
+                    // Setup ResizeObserver
+                    const resizeObserver = new ResizeObserver(entries => {
+                        for (let entry of entries) {
+                            if (entry.target === gameContainer.value) {
+                                updateGameDimensions();
+                            }
+                        }
+                    });
+
+                    if (gameContainer.value) {
+                        resizeObserver.observe(gameContainer.value);
+                    }
+
+                    // Initial dimension update
                     nextTick(() => {
                         updateGameDimensions();
                     });
@@ -591,7 +585,7 @@
                     if (gameContainer.value) {
                         gameContainer.value.addEventListener('click', handleClick);
                     }
-                    window.addEventListener('resize', updateGameDimensions);
+                    // Removed window.addEventListener('resize') as ResizeObserver handles it
                 });
 
                 onUnmounted(() => {
@@ -599,7 +593,11 @@
                     if (gameContainer.value) {
                         gameContainer.value.removeEventListener('click', handleClick);
                     }
-                    window.removeEventListener('resize', updateGameDimensions);
+                    // Disconnect ResizeObserver
+                    const resizeObserver = new ResizeObserver(() => {}); // Dummy observer to disconnect
+                    if (gameContainer.value) {
+                        resizeObserver.unobserve(gameContainer.value);
+                    }
                     cancelAnimationFrame(gameLoopId);
                     clearInterval(pipeGenerationIntervalId);
                 });
@@ -619,7 +617,9 @@
                     restartGame,
                     gameHeight,
                     gameContainer,
-                    lives
+                    lives,
+                    handleKeyDown,
+                    handleClick
                 };
             }
         }).mount('#app');
